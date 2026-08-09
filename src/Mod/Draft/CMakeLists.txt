@@ -62,6 +62,7 @@ SET(Draft_tests
     drafttests/test_array.py
     drafttests/test_base.py
     drafttests/test_creation.py
+    drafttests/test_clone_gui.py
     drafttests/test_dimension_gui.py
     drafttests/test_draftgeomutils.py
     drafttests/test_dwg.py
