@@ -57,7 +57,7 @@ jobs:
       - name: Capture the fix on the real PR build
         run: |
           mkdir -p evidence
-          xvfb-run -a pixi run freecad-release \
+          timeout 120 xvfb-run -a .pixi/envs/default/bin/FreeCAD \
             "${GITHUB_WORKSPACE}/evidence-tools/.github/scripts/pr_31996_capture.FCMacro"
           test -s evidence/pr-31996-before.png
           test -s evidence/pr-31996-after.png

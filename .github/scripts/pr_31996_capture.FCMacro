@@ -5,58 +5,66 @@ import FreeCAD as App
 import FreeCADGui as Gui
 
 
-workspace = os.environ["GITHUB_WORKSPACE"]
-evidence_dir = os.path.join(workspace, "evidence")
-source_files = glob.glob("/tmp/repro/*.FCStd")
-if len(source_files) != 1:
-    raise RuntimeError(f"Expected one reproduction file, found {len(source_files)}")
+def capture():
+    workspace = os.environ["GITHUB_WORKSPACE"]
+    evidence_dir = os.path.join(workspace, "evidence")
+    source_files = glob.glob("/tmp/repro/*.FCStd")
+    if len(source_files) != 1:
+        raise RuntimeError(f"Expected one reproduction file, found {len(source_files)}")
 
-document = App.openDocument(source_files[0])
-Gui.activeDocument().activeView().viewAxonometric()
-Gui.activeDocument().activeView().fitAll()
-Gui.updateGui()
+    Gui.activateWorkbench("PartDesignWorkbench")
+    Gui.activateWorkbench("SurfaceWorkbench")
+    document = App.openDocument(source_files[0])
+    Gui.activeDocument().activeView().viewAxonometric()
+    Gui.activeDocument().activeView().fitAll()
+    Gui.updateGui()
 
-surfaces = [obj for obj in document.Objects if obj.TypeId == "Surface::GeomFillSurface"]
-if not surfaces:
-    raise RuntimeError("The reproduction document contains no Surface::GeomFillSurface object")
+    surfaces = [obj for obj in document.Objects if obj.TypeId == "Surface::GeomFillSurface"]
+    if not surfaces:
+        raise RuntimeError("The reproduction document contains no Surface::GeomFillSurface object")
 
-surface = surfaces[0]
-boundary_count = len(surface.BoundaryList)
-initial_flags = list(surface.ReversedList)
-if len(initial_flags) != boundary_count:
-    raise RuntimeError(
-        f"PR fix did not normalize ReversedList: {len(initial_flags)} flags for {boundary_count} boundaries"
+    surface = surfaces[0]
+    boundary_count = len(surface.BoundaryList)
+    initial_flags = list(surface.ReversedList)
+    if len(initial_flags) != boundary_count:
+        raise RuntimeError(
+            f"PR fix did not normalize ReversedList: {len(initial_flags)} flags for {boundary_count} boundaries"
+        )
+
+    Gui.activeDocument().activeView().saveImage(
+        os.path.join(evidence_dir, "pr-31996-before.png"), 1280, 720, "Current"
     )
 
-Gui.activeDocument().activeView().saveImage(
-    os.path.join(evidence_dir, "pr-31996-before.png"), 1280, 720, "Current"
-)
+    changed_flags = initial_flags[:]
+    changed_flags[0] = not changed_flags[0]
+    surface.ReversedList = changed_flags
+    document.recompute()
+    Gui.activeDocument().activeView().fitAll()
+    Gui.updateGui()
+    Gui.activeDocument().activeView().saveImage(
+        os.path.join(evidence_dir, "pr-31996-after.png"), 1280, 720, "Current"
+    )
 
-changed_flags = initial_flags[:]
-changed_flags[0] = not changed_flags[0]
-surface.ReversedList = changed_flags
-document.recompute()
-Gui.activeDocument().activeView().fitAll()
-Gui.updateGui()
-Gui.activeDocument().activeView().saveImage(
-    os.path.join(evidence_dir, "pr-31996-after.png"), 1280, 720, "Current"
-)
+    surface.ReversedList = initial_flags
+    document.recompute()
+    Gui.activeDocument().activeView().fitAll()
+    Gui.updateGui()
+    Gui.activeDocument().activeView().saveImage(
+        os.path.join(evidence_dir, "pr-31996-restored.png"), 1280, 720, "Current"
+    )
 
-surface.ReversedList = initial_flags
-document.recompute()
-Gui.activeDocument().activeView().fitAll()
-Gui.updateGui()
-Gui.activeDocument().activeView().saveImage(
-    os.path.join(evidence_dir, "pr-31996-restored.png"), 1280, 720, "Current"
-)
+    with open(os.path.join(evidence_dir, "pr-31996-metadata.txt"), "w", encoding="utf-8") as metadata:
+        metadata.write(f"commit={os.environ.get('GITHUB_SHA', 'unknown')}\n")
+        metadata.write(f"surface={surface.Name}\n")
+        metadata.write(f"boundary_count={boundary_count}\n")
+        metadata.write(f"initial_flags={initial_flags}\n")
+        metadata.write(f"changed_flags={changed_flags}\n")
+        metadata.write(f"restored_flags={list(surface.ReversedList)}\n")
 
-with open(os.path.join(evidence_dir, "pr-31996-metadata.txt"), "w", encoding="utf-8") as metadata:
-    metadata.write(f"commit={os.environ.get('GITHUB_SHA', 'unknown')}\n")
-    metadata.write(f"surface={surface.Name}\n")
-    metadata.write(f"boundary_count={boundary_count}\n")
-    metadata.write(f"initial_flags={initial_flags}\n")
-    metadata.write(f"changed_flags={changed_flags}\n")
-    metadata.write(f"restored_flags={list(surface.ReversedList)}\n")
+    App.closeDocument(document.Name)
 
-App.closeDocument(document.Name)
-Gui.getMainWindow().close()
+
+try:
+    capture()
+finally:
+    Gui.getMainWindow().close()
