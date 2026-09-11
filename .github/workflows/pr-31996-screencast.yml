@@ -40,9 +40,10 @@ jobs:
 
       - name: Download the reporter's reproduction document
         run: |
-          curl --fail --location --retry 3 "$ISSUE_ARCHIVE" --output /tmp/repro.zip
-          unzip -j /tmp/repro.zip -d /tmp/repro
-          test "$(find /tmp/repro -maxdepth 1 -name '*.FCStd' | wc -l)" -eq 1
+          mkdir -p /tmp/repro
+          curl --fail --location --retry 3 "$ISSUE_ARCHIVE" \
+            --output /tmp/repro/Surface_Edge_Orientation_Fail.FCStd
+          unzip -t /tmp/repro/Surface_Edge_Orientation_Fail.FCStd
 
       - name: Capture the fix on the real PR build
         run: |
@@ -68,4 +69,3 @@ jobs:
             evidence/pr-31996-restored.png
             evidence/pr-31996-metadata.txt
           retention-days: 14
-
