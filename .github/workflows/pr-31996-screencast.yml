@@ -21,6 +21,15 @@ jobs:
           fetch-depth: 1
           submodules: recursive
 
+      - name: Check out evidence tooling separately
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: evidence-tools
+          sparse-checkout: |
+            .github/scripts/pr_31996_capture.FCMacro
+          sparse-checkout-cone-mode: false
+
       - name: Set up Pixi
         uses: prefix-dev/setup-pixi@v0.9.4
         with:
@@ -48,7 +57,8 @@ jobs:
       - name: Capture the fix on the real PR build
         run: |
           mkdir -p evidence
-          xvfb-run -a pixi run freecad-release "${GITHUB_WORKSPACE}/.github/scripts/pr_31996_capture.FCMacro"
+          xvfb-run -a pixi run freecad-release \
+            "${GITHUB_WORKSPACE}/evidence-tools/.github/scripts/pr_31996_capture.FCMacro"
           test -s evidence/pr-31996-before.png
           test -s evidence/pr-31996-after.png
           test -s evidence/pr-31996-restored.png
