@@ -65,7 +65,7 @@ jobs:
           ffmpeg -y -loop 1 -t 3 -i evidence/pr-31996-before.png \
             -loop 1 -t 4 -i evidence/pr-31996-after.png \
             -loop 1 -t 3 -i evidence/pr-31996-restored.png \
-            -filter_complex "[0:v]fade=t=out:st=2.5:d=.5[v0];[1:v]fade=t=in:st=0:d=.5,fade=t=out:st=3.5:d=.5[v1];[2:v]fade=t=in:st=0:d=.5[v2];[v0][v1][v2]concat=n=3:v=1:a=0,format=yuv420p[v]" \
+            -filter_complex "[0:v]fade=t=out:st=2.5:d=0.5[v0];[1:v]fade=t=in:st=0:d=0.5,fade=t=out:st=3.5:d=0.5[v1];[2:v]fade=t=in:st=0:d=0.5[v2];[v0][v1][v2]concat=n=3:v=1:a=0,format=yuv420p[v]" \
             -map "[v]" -r 30 -c:v libx264 -movflags +faststart evidence/pr-31996-screencast.mp4
 
       - name: Upload evidence
