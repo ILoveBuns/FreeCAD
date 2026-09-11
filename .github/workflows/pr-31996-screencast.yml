@@ -1,0 +1,71 @@
+name: PR 31996 screencast evidence
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  record:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      PR_REF: fix/issue-29874
+      ISSUE_ARCHIVE: https://github.com/user-attachments/files/27426625/Surface_Edge_Orientation_Fail.FCStd.zip
+    steps:
+      - name: Check out the reviewed PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PR_REF }}
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: v0.68.1
+          cache: true
+
+      - name: Build and install the PR
+        run: |
+          pixi run configure-release
+          pixi run build-release
+          pixi run install-release
+
+      - name: Install recording tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg imagemagick unzip xvfb
+
+      - name: Download the reporter's reproduction document
+        run: |
+          curl --fail --location --retry 3 "$ISSUE_ARCHIVE" --output /tmp/repro.zip
+          unzip -j /tmp/repro.zip -d /tmp/repro
+          test "$(find /tmp/repro -maxdepth 1 -name '*.FCStd' | wc -l)" -eq 1
+
+      - name: Capture the fix on the real PR build
+        run: |
+          mkdir -p evidence
+          xvfb-run -a pixi run freecad-release "${GITHUB_WORKSPACE}/.github/scripts/pr_31996_capture.FCMacro"
+          test -s evidence/pr-31996-before.png
+          test -s evidence/pr-31996-after.png
+          test -s evidence/pr-31996-restored.png
+          ffmpeg -y -loop 1 -t 3 -i evidence/pr-31996-before.png \
+            -loop 1 -t 4 -i evidence/pr-31996-after.png \
+            -loop 1 -t 3 -i evidence/pr-31996-restored.png \
+            -filter_complex "[0:v]fade=t=out:st=2.5:d=.5[v0];[1:v]fade=t=in:st=0:d=.5,fade=t=out:st=3.5:d=.5[v1];[2:v]fade=t=in:st=0:d=.5[v2];[v0][v1][v2]concat=n=3:v=1:a=0,format=yuv420p[v]" \
+            -map "[v]" -r 30 -c:v libx264 -movflags +faststart evidence/pr-31996-screencast.mp4
+
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-31996-screencast
+          path: |
+            evidence/pr-31996-screencast.mp4
+            evidence/pr-31996-before.png
+            evidence/pr-31996-after.png
+            evidence/pr-31996-restored.png
+            evidence/pr-31996-metadata.txt
+          retention-days: 14
+
