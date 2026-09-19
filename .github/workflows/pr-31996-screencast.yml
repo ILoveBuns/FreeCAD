@@ -30,6 +30,9 @@ jobs:
             .github/scripts/pr_31996_capture.FCMacro
           sparse-checkout-cone-mode: false
 
+      - name: Record the reviewed PR commit
+        run: echo "PR_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
       - name: Set up Pixi
         uses: prefix-dev/setup-pixi@v0.9.4
         with:
@@ -62,9 +65,21 @@ jobs:
           test -s evidence/pr-31996-before.png
           test -s evidence/pr-31996-after.png
           test -s evidence/pr-31996-restored.png
-          ffmpeg -y -loop 1 -t 3 -i evidence/pr-31996-before.png \
-            -loop 1 -t 4 -i evidence/pr-31996-after.png \
-            -loop 1 -t 3 -i evidence/pr-31996-restored.png \
+          convert evidence/pr-31996-before.png \
+            -gravity NorthWest -fill white -undercolor '#000000B0' -pointsize 24 \
+            -annotate +24+24 "PR ${PR_COMMIT:0:10} | ReversedList [false, false] | corrected" \
+            evidence/pr-31996-before-labelled.png
+          convert evidence/pr-31996-after.png \
+            -gravity NorthWest -fill white -undercolor '#000000B0' -pointsize 24 \
+            -annotate +24+24 "Toggle boundary 1 | ReversedList [true, false] | geometry changes" \
+            evidence/pr-31996-after-labelled.png
+          convert evidence/pr-31996-restored.png \
+            -gravity NorthWest -fill white -undercolor '#000000B0' -pointsize 24 \
+            -annotate +24+24 "Toggle restored | ReversedList [false, false] | corrected again" \
+            evidence/pr-31996-restored-labelled.png
+          ffmpeg -y -loop 1 -t 3 -i evidence/pr-31996-before-labelled.png \
+            -loop 1 -t 4 -i evidence/pr-31996-after-labelled.png \
+            -loop 1 -t 3 -i evidence/pr-31996-restored-labelled.png \
             -filter_complex "[0:v]fade=t=out:st=2.5:d=0.5[v0];[1:v]fade=t=in:st=0:d=0.5,fade=t=out:st=3.5:d=0.5[v1];[2:v]fade=t=in:st=0:d=0.5[v2];[v0][v1][v2]concat=n=3:v=1:a=0,format=yuv420p[v]" \
             -map "[v]" -r 30 -c:v libx264 -movflags +faststart evidence/pr-31996-screencast.mp4
 
@@ -77,5 +92,8 @@ jobs:
             evidence/pr-31996-before.png
             evidence/pr-31996-after.png
             evidence/pr-31996-restored.png
+            evidence/pr-31996-before-labelled.png
+            evidence/pr-31996-after-labelled.png
+            evidence/pr-31996-restored-labelled.png
             evidence/pr-31996-metadata.txt
           retention-days: 14

@@ -54,7 +54,7 @@ def capture():
     )
 
     with open(os.path.join(evidence_dir, "pr-31996-metadata.txt"), "w", encoding="utf-8") as metadata:
-        metadata.write(f"commit={os.environ.get('GITHUB_SHA', 'unknown')}\n")
+        metadata.write(f"commit={os.environ.get('PR_COMMIT', 'unknown')}\n")
         metadata.write(f"surface={surface.Name}\n")
         metadata.write(f"boundary_count={boundary_count}\n")
         metadata.write(f"initial_flags={initial_flags}\n")
